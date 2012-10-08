@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" 
+        version="1.0" 
+        defaultlocale="en" 
+        id="extensions:ujs-converter">
+	<name>UserScript Converter</name>
+	<description xml:lang="en">
+		Converts user scripts to extensions
+	</description>
+	<author href="http://chaosinacan.com/">Joel Spadin</author>
+	<icon src="img/icon.png" />
+	
+	<access origin="*" />
+</widget>

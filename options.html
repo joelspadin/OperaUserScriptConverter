@@ -1,0 +1,56 @@
+﻿<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>UserScript to Extension Converter</title>
+
+	<link rel="stylesheet" href="css/options.css">
+	<link rel="stylesheet" href="css/sh_theme.css">
+
+	<script src="js/lib/require.js"></script>
+	<script src="js/lib/jszip.js"></script>
+	<script src="js/lib/jszip-deflate.js"></script>
+	<script src="js/lib/sh_main.js"></script>
+	<script src="js/lib/sh_javascript.js"></script>
+	<script src="js/package.js"></script>
+</head>
+<body>
+<div id="viewport">
+	<div id="topbar"></div>
+	<div id="content">
+		<header>
+			<img src="img/icon.png" alt="Converter Icon">
+			<div class="right">
+				<h1><span id="widget-name">UserScript Converter</span> <span class="version" id="widget-version"></span></h1>
+				<h2>By <span id="widget-author">Joel Spadin</span></h2>
+			</div>
+		</header>
+
+		<div id="external-script" style="display:none">
+			Generating an extension for <a id="url"></a> ... <span id="done" style="display:none">done.</span>
+		</div>
+		<div id="upload-script" style="display:none">
+			<p>
+				Drop scripts on this page, or <label>select a script to convert: <input type="file" id="script" accept="application/javascript"></label>
+			</p>
+		</div>
+		<div id="install-script" style="display:none">
+			<button id="install">Install <span class="name"></span></button>
+		</div>
+		<div id="generated-script">
+
+		</div>
+
+		<footer id="credits">
+			<ul>
+				<li>UserScript Converter is &copy; 2012 <a href="http://chaosinacan.com">Joel Spadin</a></li>
+				<li><a href="https://github.com/Stuk/jszip">JSZip</a> by Stuart Knightley, David Duponchel, Franz Buchinger and António Afonso</li>
+				<li><a href="https://github.com/jrburke/requirejs">RequireJS</a> by The Dojo Foundation</li>
+				<li><a href="http://shjs.sourceforge.net/">SHJS</a> by gnombat</li>
+				<li><a href="https://github.com/mishoo/UglifyJS">UglifyJS</a> by Robert Gust-Bardon</li>
+			</ul>
+		</footer>
+	</div>
+</div>
+</body>
+</html>
