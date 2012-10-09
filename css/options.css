@@ -132,9 +132,12 @@ button {
 }
 
 
+#external-script {
+	text-align: center;
+}
+
 #install-script {
 	text-align: center;
-	margin: 1em 0;
 }
 
 #install {
@@ -149,6 +152,9 @@ button {
 	background: #70379d;
 }
 
+#install-instructions {
+	display: none;
+}
 
 /* Make the storage debug lists easy to read */
 

@@ -1,5 +1,5 @@
 (function() {
-  var areArgsEqual, buildExtension, fixScript, getConfig, getConfigXml, getMetadata, hideInstallButton, iced, parseURL, readFile, root, showInstallButton, __iced_k, __iced_k_noop,
+  var areArgsEqual, buildExtension, fixScript, getConfig, getConfigXml, getMetadata, hideInstallButton, iced, installExtension, parseURL, readFile, root, showInstallButton, __iced_k, __iced_k_noop,
     __slice = [].slice;
 
   iced = {
@@ -45,17 +45,28 @@
 
   root.bg = oex.bgProcess;
 
+  root.blocksExtensionDownloads = parseFloat(opera.version()) >= 12.10;
+
+  root.extension = null;
+
   require.config({
     baseUrl: '/js/lib/'
   });
 
-  root.extension = null;
-
   window.addEventListener('DOMContentLoaded', function() {
-    var config, handleFileSelect, script, success, url, ___iced_passed_deferral, __iced_deferrals, __iced_k,
+    var config, handleFileSelect, info, script, selector, success, text, url, ___iced_passed_deferral, __iced_deferrals, __iced_k,
       _this = this;
     __iced_k = __iced_k_noop;
     ___iced_passed_deferral = iced.findDeferral(arguments);
+    info = {
+      '#widget-name': widget.name,
+      '#widget-version': widget.version,
+      '#widget-author': widget.author
+    };
+    for (selector in info) {
+      text = info[selector];
+      document.querySelector(selector).textContent = text;
+    }
     (function(__iced_k) {
       __iced_deferrals = new iced.Deferrals(__iced_k, {
         parent: ___iced_passed_deferral
@@ -66,18 +77,11 @@
             return __slot_1.uglify = arguments[0];
           };
         })(root),
-        lineno: 13
+        lineno: 23
       }));
       __iced_deferrals._fulfill();
     })(function() {
-      document.querySelector('#install').addEventListener('click', function() {
-        if (root.extension != null) {
-          return bg.oex.tabs.create({
-            url: root.extension,
-            focused: true
-          });
-        }
-      });
+      document.querySelector('#install').addEventListener('click', installExtension);
       if (location.hash) {
         url = location.hash.substr(1);
         document.querySelector('#external-script').style.display = 'block';
@@ -94,7 +98,7 @@
                 return script = arguments[1];
               };
             })(),
-            lineno: 26
+            lineno: 34
           })));
           __iced_deferrals._fulfill();
         })(function() {
@@ -162,7 +166,7 @@
                         return s = arguments[0];
                       };
                     })(),
-                    lineno: 48
+                    lineno: 56
                   }));
                   __iced_deferrals._fulfill();
                 })(function() {
@@ -192,11 +196,15 @@
     var button;
     button = document.querySelector('#install-script');
     button.style.display = 'block';
-    return button.querySelector('.name').textContent = name;
+    button.querySelector('.name').textContent = name;
+    if (blocksExtensionDownloads) {
+      return document.querySelector('#install-instructions').style.display = 'block';
+    }
   };
 
   hideInstallButton = function() {
-    return document.querySelector('#install-script').style.display = 'none';
+    document.querySelector('#install-script').style.display = 'none';
+    return document.querySelector('#install-instructions').style.display = 'none';
   };
 
   readFile = function(file, callback) {
@@ -209,7 +217,7 @@
   };
 
   buildExtension = function(scripts, configs) {
-    var i, includes, mimetype, output, p, pre, s, zip, _i, _j, _len, _len1;
+    var i, includes, output, p, pre, s, zip, _i, _j, _len, _len1;
     output = document.querySelector('#generated-script');
     output.innerHTML = '';
     if (scripts.length === 0) {
@@ -237,12 +245,22 @@
       s = scripts[i];
       includes.file("" + configs[i].name + ".js", s);
     }
-    if (parseFloat(opera.version()) >= 12.10) {
+    return root.extension = zip.generate();
+  };
+
+  installExtension = function() {
+    var data, mimetype;
+    if (!(root.extension != null)) return false;
+    if (blocksExtensionDownloads) {
       mimetype = 'application/zip';
     } else {
       mimetype = 'application/x-opera-extension';
     }
-    return root.extension = "data:" + mimetype + ";base64," + (zip.generate());
+    data = "data:" + mimetype + ";base64," + root.extension;
+    return bg.oex.tabs.create({
+      url: data,
+      focused: true
+    });
   };
 
   fixScript = function(script, isGreaseMonkey) {

@@ -3,17 +3,25 @@ root = this
 root.oex = opera.extension
 root.bg = oex.bgProcess
 
+root.blocksExtensionDownloads = parseFloat(opera.version()) >= 12.10
+root.extension = null
+
 require.config
 	baseUrl: '/js/lib/'
 
-root.extension = null
-
 window.addEventListener 'DOMContentLoaded', () ->
+
+	info =
+		'#widget-name': widget.name
+		'#widget-version': widget.version
+		'#widget-author': widget.author
+	for selector, text of info
+		document.querySelector(selector).textContent = text
+
+
 	await require ['uglify-js'], defer root.uglify
 
-	document.querySelector('#install').addEventListener 'click', () ->
-		if root.extension?
-			bg.oex.tabs.create { url: root.extension, focused: true }
+	document.querySelector('#install').addEventListener 'click', installExtension
 
 	if location.hash 
 		url = location.hash.substr(1)
@@ -68,9 +76,13 @@ showInstallButton = (name) ->
 	button.style.display = 'block'
 	button.querySelector('.name').textContent = name
 
+	if blocksExtensionDownloads
+		document.querySelector('#install-instructions').style.display = 'block'
+
 
 hideInstallButton = () ->
 	document.querySelector('#install-script').style.display = 'none'
+	document.querySelector('#install-instructions').style.display = 'none'
 
 
 readFile = (file, callback) ->
@@ -117,15 +129,21 @@ buildExtension = (scripts, configs) ->
 	for s, i in scripts
 		includes.file "#{configs[i].name}.js", s
 
-	if parseFloat(opera.version()) >= 12.10
+	root.extension = zip.generate()
+	
+
+installExtension = () ->
+	if not root.extension?
+		return false
+
+	if blocksExtensionDownloads
 		mimetype = 'application/zip'
 	else
 		mimetype = 'application/x-opera-extension'
-
-
-	root.extension = "data:#{mimetype};base64,#{zip.generate()}"
-	#root.extension = "data:application/zip;base64,#{zip.generate()}"
 	
+	data = "data:#{mimetype};base64,#{root.extension}"
+	bg.oex.tabs.create { url: data, focused: true }
+
 
 
 fixScript = (script, isGreaseMonkey) ->

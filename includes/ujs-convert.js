@@ -2,24 +2,24 @@
 // @include			*.js
 // ==/UserScript==
 
-window.addEventListener('DOMContentLoaded', function() {
+window.opera.addEventListener('AfterEvent.DOMContentLoaded', function() {
 
-	if (!document.querySelector('body > pre'))
+	if (!document.querySelector('body pre'))
 		return;
 
 	var animTime = 0.6;
 
 	var bar = document.createElement('div');
-	var spacer = document.createElement('div');
 	var install = document.createElement('button');
 	var cancel = document.createElement('button');
+	var code = document.querySelector('body pre');
 
 	(function() {
 		var icon = document.createElement('img');
 		var text = document.createElement('span');
 		var buttons = document.createElement('div');
 
-		bar.style.position = 'fixed';
+		bar.style.position = 'absolute';
 		bar.style.top = '0';
 		bar.style.left = '0';
 		bar.style.right = '0';
@@ -29,13 +29,19 @@ window.addEventListener('DOMContentLoaded', function() {
 
 		bar.style.color = '#555';
 		bar.style.backgroundImage = "-o-skin('Infobar Toolbar Skin')";
-		bar.style.font = '14px/20px "Segoe UI", "Helvetica", "helvetica neue", arial, sans-serif';
+		bar.style.font = '14px/20px "Segoe UI", "Helvetica", "Helvetica Neue", arial, sans-serif';
 
-		spacer.style.margin = '-8px -8px 0';
-		spacer.style.height = '29px';
+		bar.style.OTransition = bar.style.transition = 'top ' + animTime + 's';
 
-		bar.style.OTransition = spacer.style.OTransition = 'height ' + animTime + 's';
-		bar.style.transition = spacer.style.transition = 'height ' + animTime + 's';
+		code.style.position = 'absolute';
+		code.style.top = '30px';
+		code.style.left = '0';
+		code.style.right = '0';
+		code.style.bottom = '0';
+		code.style.padding = '8px';
+		code.style.overflow = 'auto';
+
+		code.style.OTransition = code.style.transition = 'top ' + animTime + 's';
 
 		icon.style.height = '18px';
 		icon.style.width = '18px';
@@ -67,10 +73,8 @@ window.addEventListener('DOMContentLoaded', function() {
 		bar.appendChild(text);
 		bar.appendChild(buttons);
 
-		document.body.insertBefore(spacer, document.body.firstChild);
-		document.body.insertBefore(bar, document.body.firstChild);
+		document.body.insertBefore(bar, code);
 	})();
-
 
 	function pack() {
 		opera.extension.postMessage({
@@ -85,11 +89,10 @@ window.addEventListener('DOMContentLoaded', function() {
 		install.removeEventListener('click', pack, false);
 		cancel.removeEventListener('click', removeBar, false);
 
-		bar.style.height = '0px';
-		spacer.style.height = '0px';
+		bar.style.top = '-30px';
+		code.style.top = '0px';
 		setTimeout(function() {
 			document.body.removeChild(bar);
-			document.body.removeChild(spacer);
 		}, animTime * 1000);
 	}
 

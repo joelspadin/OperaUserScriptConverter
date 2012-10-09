@@ -9,7 +9,7 @@ oex.onmessage = (e) ->
 
 messageHandlers = 
 	'package': (e) ->
-		oex.tabs.create { url: "package.html##{e.data.script}", focused: true }
+		oex.tabs.create { url: "options.html##{e.data.script}", focused: true }
 
 
 
