@@ -6,10 +6,14 @@ root.bg = oex.bgProcess
 root.blocksExtensionDownloads = parseFloat(opera.version()) >= 12.10
 root.extension = null
 
+root.incrementVersion = false
+root.currentVersion = JSON.parse(sessionStorage['version'] or '0')
+
 require.config
 	baseUrl: '/js/lib/'
 
 window.addEventListener 'DOMContentLoaded', () ->
+	# update page info and version number
 
 	info =
 		'#widget-name': widget.name
@@ -18,49 +22,64 @@ window.addEventListener 'DOMContentLoaded', () ->
 	for selector, text of info
 		document.querySelector(selector).textContent = text
 
+	document.querySelector('#install').addEventListener 'click', installExtension
 
 	await require ['uglify-js'], defer root.uglify
 
-	document.querySelector('#install').addEventListener 'click', installExtension
-
-	if location.hash 
+	# if a script is passed through the url hash, download the script
+	if location.hash
+		# trim off the leading hash sign
 		url = location.hash.substr(1)
 
 		document.querySelector('#external-script').style.display = 'block'
 		document.querySelector('#url').textContent = url
 		document.querySelector('#url').href = url
 
+		# download the script
 		await bg.get url, (defer success, script)
-
+		
+		root.script = script
 		if not success
 			console.log "UJS Packager: Failed to download #{url}"
 			return
 
+		# fix the script
 		config = getConfig(script, url)
-		buildExtension(script, config)
+		await buildExtension(script, config, defer root.extension)
 
 		document.querySelector('#done').style.display = 'inline'
-		showInstallButton(config.name)
+		if extension?
+			showInstallButton(config.name)
+		else
+			document.querySelector('#done').textContent = 'failed.'
 	else
+		# if no script was given, allow the user to upload scripts
 		document.querySelector('#upload-script').style.display = 'block'
 
+		# event handler for dropped and uploaded files
 		handleFileSelect = (e) ->
 			hideInstallButton()
 			root.extension = null
 
 			scripts = []
 			configs = []
-			files = (file for file in e.target.files ? e.dataTransfer.files when file.type.match('application/x-javascript'))
+			# Filter out everything that isn't a JavaScript file
+
+			files = (file for file in e.dataTransfer?.files ? e.target.files when file.type.match('application/x-javascript'))
 			
+			# read each file and get its config info
 			for file in files
 				await readFile file, defer s
 				scripts.push(s)
 				configs.push getConfig(s, 'file://localhost/' + file.name)
 
-			buildExtension(scripts, configs)
-			if root.extension?
+			root.scripts = scripts
+
+			await buildExtension(scripts, configs, defer root.extension)
+			if extension?
 				showInstallButton(configs[0].name)
 			
+		# attach the event handler
 		document.body.addEventListener 'dragover', (e) ->
 			e.stopPropagation()
 			e.preventDefault()
@@ -85,6 +104,13 @@ hideInstallButton = () ->
 	document.querySelector('#install-instructions').style.display = 'none'
 
 
+showError = (msg) ->
+	p = document.createElement('p')
+	p.textContent = msg
+	p.className = 'error'
+	document.querySelector('#generated-script').appendChild(p)
+
+# reads an uploaded text file
 readFile = (file, callback) ->
 	reader = new FileReader
 	reader.onload = (e) ->
@@ -93,45 +119,98 @@ readFile = (file, callback) ->
 	reader.readAsText(file)
 
 
-buildExtension = (scripts, configs) ->
+buildExtension = (scripts, configs, callback) ->
 	output = document.querySelector('#generated-script')
 	output.innerHTML = ''
 
-	if scripts.length == 0
-		p = document.createElement('p')
-		p.textContent = 'Error: None of the given files were scripts.'
-		output.appendChild(p)
+	# make sure there is at least one script
+	if not scripts? or scripts.length == 0
+		showError('Error: None of the given files were scripts.')
 		return
 
+	# if only one script is given, put it into an array
 	if not Array.isArray(scripts)
 		scripts = [scripts]
 
 	if not Array.isArray(configs)
 		configs = [configs]
 
+	root.prefs = []
+
 	for s, i in scripts
+		# fix each script and get its preferences
+		[s, prefs[i]] = replacePreferences(s)
 		scripts[i] = fixScript(s, configs[i].greasemonkey)
 
+		# put a divider between scripts in the display
 		if i > 0
 			output.appendChild document.createElement('br')
 
+		# display the generated scripts
+		if prefs[i].length > 0
+			ul = document.createElement('ul')
+			ul.style.display = 'none'
+			for [name, value, text, type] in prefs[i]
+				li = document.createElement('li')
+				li.textContent = "#{name} (#{type})"
+				ul.appendChild(li)
+			output.appendChild(ul)
+
 		pre = document.createElement('pre')
-		pre.textContent = scripts[i]
+		pre.textContent = scripts[i] ? ('// Failed to generate script. Original code:\n\n' + s)
 		sh_highlightElement(pre, sh_languages.javascript)
 
 		output.appendChild(pre)
 
+	# remove all failed scripts. Don't continue if none are left
+	scripts = scripts.filter (x) -> x?
+	if scripts.length == 0
+		callback?(null)
+
+	# Package the extension as a zip file
 	zip = new JSZip
-	zip.file 'config.xml', getConfigXml(configs[0])
-	zip.file 'index.html', '<!doctype html>'
+	root.files =
+		'config.xml': getConfigXml(configs[0])
+		js: {}
+		css: {}
+		includes: {}
 
-	includes = zip.folder 'includes'
 	for s, i in scripts
-		includes.file "#{configs[i].name}.js", s
+		files.includes["#{configs[i].name}.js"] = s
 
-	root.extension = zip.generate()
+	# if any script has preferences, include options page and its dependencies
+	if prefs.reduce ((prev, curr) -> !!prev or curr.length > 0), false
+		await bg.file '/package/index-prefs.html', defer files['index.html']
+		await bg.file '/package/options.html', defer files['options.html']
+		await bg.file '/package/css/options.css', defer files.css['options.css']
+		await bg.file '/package/js/options.js', defer files.js['options.js']
+		await bg.file '/package/js/options_page.js', defer files.js['options_page.js']
+		await bg.file '/package/js/storage.js', defer files.js['storage.js']
+
+		# build default settings array
+		prefDefs = ("['#{name}', #{JSON.stringify(value)}, '#{text}', '#{type}']" for [name, value, text, type] in scriptPrefs for scriptPrefs, i in prefs)
+		prefDefs = prefDefs.join(',\n\t')
+		files.js['default_settings.js'] = "var defaults = [ \n\t#{prefDefs} \n]; var storage = new SettingStorage(defaults);"
+	else
+		await bg.file '/package/index.html', defer files['index.html']
+			
+	addDirectoryToZip(zip, files)
+	callback?(zip.generate())
 	
-
+# Fills a zip object with files from an object describing files and directories
+# zip -- A JSZip object
+# dir -- an object describing files and folders. Each key, value pair should one of:
+#		 'filename': 'file data'
+#		 'folder name': { dir object }
+addDirectoryToZip = (zip, dir) ->
+	for name, file of dir
+		if typeof file == 'string'
+			zip.file name, file
+		else if not isEmpty(file)
+			folder = zip.folder name
+			addDirectoryToZip(folder, file)
+			
+# Builds the extension as a data URI and opens it in a new tab so that Opera will download it
 installExtension = () ->
 	if not root.extension?
 		return false
@@ -145,23 +224,62 @@ installExtension = () ->
 	bg.oex.tabs.create { url: data, focused: true }
 
 
-
+# Applies all the relevant transformations to a script and returns the updated script
 fixScript = (script, isGreaseMonkey) ->
 	pro = uglify.uglify
 
-	meta = getMetadata(script)[0]
-	ast = uglify.parser.parse(script)
-	root.ast = ast
+	try
+		# parse the script
+		meta = getMetadata(script)[0]
+		ast = uglify.parser.parse(script)
+	
+		# fix the script
+		ast = fixGlobals(ast)
+		ast = removeClosure(ast)
+		root.ast = ast
+	catch error
+		if error.col?
+			msg = "#{error.message} at line #{error.line}, position #{error.pos}."
+			# an unexpected < at the first character usually means the input is HTML instead of JavaScript
+			if error.message == 'Unexpected token: operator (<)' and error.line == 1 and error.pos == 1
+				msg += ' (This file doesn\'t look like JavaScript.)'
+		else
+			msg = error.message
 
-	ast = fixGlobals(ast)
-	ast = removeClosure(ast)
-	root.ast = ast
+		showError(msg)
+		return null
 
 	# Wrap GreaseMonkey scripts in a DOMContentLoaded event
 	if isGreaseMonkey
 		ast = wrapWithLoadedEvent(ast)
 
 	return meta + '\n\n' + uglify.uglify.gen_code(ast, { beautify: true })
+
+# Finds userscript preferences, replaces them with references to widget.preferences and returns 
+# a tuple containing the updated script and the list of preferences
+# returns:
+#	script, [ pref1, pref2, ... ] (pref = [name, defaultValue, displayName, type])
+replacePreferences = (script) ->
+	pattern =  ///
+		(var[\s\n]+|^\s*)(\w+[\w\d])					# variable name
+		*\s*=\s*.*										# = sign
+		/\*\s*@\s* (.+) \s*@\s* (\w+) \s*@\s*\*/		# start comment: /*@ display name @ type @*/
+		(.+)											# default value
+		/\*\s*@\s*\*/(.+)								# end comment: /*@*/
+	///mg
+
+	prefs = []
+
+	script = script.replace pattern, (match, prefix, name, text, type, value, postfix) ->
+		# if type is string and value doesn't start with quotes, wrap it in quotes
+		if type in ['string', 'color'] and value[0] != '"'
+			value = value.replace /^'|'$/g, ''
+			value = "\"#{value}\""
+
+		prefs.push [name, JSON.parse(value), text, type]
+		return "#{prefix}#{name} = JSON.parse(widget.preferences['#{name}'])#{postfix}"
+
+	return [script, prefs]
 
 
 # Stick 'window' in front of implicitly global variables since a user script's global namespace is 'window'
@@ -176,18 +294,22 @@ root.fixGlobals = (ast) ->
 		return ['dot', ['name', 'window'], name]
 
 	is_global = (name) ->
-		# impossible to tell if variable is global if 'with' or 'eval' is used, so assume it isn't
-		if scope.uses_with or scope.uses_eval
-			return false
 		
-		# check that the name is not an exception
-		if name in ['this', 'arguments', 'null', 'true', 'false', 'undefined', 'window', 'document', 'Function', 'Object', 'Array', 'String', 'Number', 'Math']
+		# check that the name is not one of various objects which should not or do not need to be global
+		if name in ['this', 'arguments', 'null', 'true', 'false', 'undefined', 'window', 'document', 'widget', 'opera', 'Function', 'Object', 'Array', 'String', 'Number', 'Math']
 			return false
 
 		# check that the name does not exist in the current or any higher scopes
 		currentScope = scope
 		while currentScope.parent?
 			if name of currentScope.names
+				return false
+			currentScope = currentScope.parent
+
+		# impossible to tell if variable is global if 'with' or 'eval' is used, so assume it isn't
+		currentScope = scope
+		while currentScope?
+			if currentScope.uses_with
 				return false
 			currentScope = currentScope.parent
 
@@ -199,7 +321,7 @@ root.fixGlobals = (ast) ->
 			return MAP(body, walk)
 
 		# if function defined at top level, add it to window
-		if name and this[0] == 'defun' and not scope.parent?
+		if name and this[0] == 'defun' and not scope.parent? and not (scope.uses_with)
 			return ['stat',
 				['assign', true,
 					windowDot(name),
@@ -211,7 +333,7 @@ root.fixGlobals = (ast) ->
 
 	_vardefs = (defs) ->
 		# top level var defs should be attached to window
-		if not scope.parent?
+		if not scope.parent? and not (scope.uses_with)
 			return ['splice', MAP defs, (d) ->
 				value = walk(d[1]) ? ['name', 'undefined']
 				return ['stat', 
@@ -331,6 +453,11 @@ getConfig = (script, url) ->
 	if not version?
 		version = '1.0'
 
+	if root.incrementVersion
+		version = version + '.' + root.currentVersion
+		root.currentVersion += 1
+		sessionStorage['version'] = root.currentVersion
+
 	if not description?
 		description = "User JavaScript: #{url}"
 
@@ -390,6 +517,18 @@ String.prototype.encodeHTML = ->
 			.replace(/'/g, '&#39;')
 			.replace(/</g, '&lt;')
 			.replace(/>/g, '&gt;')
+
+isEmpty = (o) ->
+	if o.length?
+		if o.length > 0
+			return false
+		if o.length == 0
+			return true
+
+	for key of o
+		return false
+
+	return true
 
 areArgsEqual = (a, b) ->
 	if a.length != b.length

@@ -1,8 +1,14 @@
 // ==UserScript==
 // @include			*.js
+// @include			*.js?*
 // ==/UserScript==
 
-window.opera.addEventListener('AfterEvent.DOMContentLoaded', function() {
+if (window.document.readyState == 'complete')
+	init();
+else
+	window.opera.addEventListener('AfterEvent.DOMContentLoaded', init, false);
+
+function init() {
 
 	if (!document.querySelector('body pre'))
 		return;
@@ -96,4 +102,4 @@ window.opera.addEventListener('AfterEvent.DOMContentLoaded', function() {
 		}, animTime * 1000);
 	}
 
-}, false);
+}

@@ -37,7 +37,7 @@ html, body {
 
 #content {
 	box-sizing: border-box;
-	max-width: 840px;
+	max-width: 700px;
 	margin: 25px auto 15px;
 	padding: 25px 50px;
 	overflow: auto;
@@ -56,29 +56,12 @@ body.nobar #viewport {
 }
 
 
-pre {
-	line-height: normal;
-	overflow: auto;
-}
-
-
-
 header {
-	padding: 10px 30px 10px;
-	margin: 0 0 2em;
-	overflow: auto;
+	padding: 0 50px 10px;
+	margin: 4px 0 2em;
 	
 	border-bottom: 1px solid rgba(0,0,0,0.15);
 	box-shadow: 0 1px #fff;
-}
-
-header img {
-	float: left;
-}
-
-header .right {
-	float: left;
-	padding: 10px 0 10px 30px;
 }
 
 h1 {
@@ -106,10 +89,8 @@ footer {
 	box-shadow: 0 -1px rgba(0,0,0,0.15);
 }
 
-
-
 fieldset {
-	margin-bottom: 40px;
+	margin-bottom: 2em;
 	padding: 0 20px;
 	
 	border: none;
@@ -121,45 +102,9 @@ button {
 	line-height: normal;
 }
 
-#credits {
-	columns: 2;
+label {
+	padding-left: 10px;
 }
-
-#credits ul {
-	margin: 0;
-	padding: 0 20px;
-	list-style: none;
-}
-
-
-#external-script {
-	text-align: center;
-}
-
-#install-script {
-	text-align: center;
-}
-
-#install {
-	font-size: 22px;
-	border: 1px solid #70379d;
-	background: #7b4f9d;
-	color: #fff;
-	padding: 3px 20px;
-}
-
-#install:hover {
-	background: #70379d;
-}
-
-#install-instructions {
-	display: none;
-}
-
-.error {
-	color: #f00;
-}
-
 
 /* Make the storage debug lists easy to read */
 

@@ -28,13 +28,24 @@
     xhr.open('get', url, true);
     xhr.responseType = 'text';
     xhr.onload = function(e) {
-      if (this.status === 200) {
+      if (this.status === 200 || this.status === 0) {
         return callback(true, this.responseText);
       } else {
         return callback(false, this);
       }
     };
     return xhr.send();
+  };
+
+  root.file = function(path, callback) {
+    return root.get(path, function(success, file) {
+      if (success) {
+        return typeof callback === "function" ? callback(file) : void 0;
+      } else {
+        console.log("UJS Packager: Could not load file \"" + path + "\"");
+        return typeof callback === "function" ? callback('') : void 0;
+      }
+    });
   };
 
 }).call(this);

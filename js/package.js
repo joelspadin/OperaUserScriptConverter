@@ -1,42 +1,7 @@
 (function() {
-  var areArgsEqual, buildExtension, fixScript, getConfig, getConfigXml, getMetadata, hideInstallButton, iced, installExtension, parseURL, readFile, root, showInstallButton, __iced_k, __iced_k_noop,
-    __slice = [].slice;
+  var addDirectoryToZip, areArgsEqual, buildExtension, fixScript, getConfig, getConfigXml, getMetadata, hideInstallButton, iced, installExtension, isEmpty, parseURL, readFile, replacePreferences, root, showError, showInstallButton, __iced_k, __iced_k_noop;
 
-  iced = {
-    Deferrals: (function() {
-
-      function _Class(_arg) {
-        this.continuation = _arg;
-        this.count = 1;
-        this.ret = null;
-      }
-
-      _Class.prototype._fulfill = function() {
-        if (!--this.count) return this.continuation(this.ret);
-      };
-
-      _Class.prototype.defer = function(defer_params) {
-        var _this = this;
-        ++this.count;
-        return function() {
-          var inner_params, _ref;
-          inner_params = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-          if (defer_params != null) {
-            if ((_ref = defer_params.assign_fn) != null) {
-              _ref.apply(null, inner_params);
-            }
-          }
-          return _this._fulfill();
-        };
-      };
-
-      return _Class;
-
-    })(),
-    findDeferral: function() {
-      return null;
-    }
-  };
+  iced = require('iced-coffee-script').iced;
   __iced_k = __iced_k_noop = function() {};
 
   root = this;
@@ -48,6 +13,10 @@
   root.blocksExtensionDownloads = parseFloat(opera.version()) >= 12.10;
 
   root.extension = null;
+
+  root.incrementVersion = false;
+
+  root.currentVersion = JSON.parse(sessionStorage['version'] || '0');
 
   require.config({
     baseUrl: '/js/lib/'
@@ -67,6 +36,7 @@
       text = info[selector];
       document.querySelector(selector).textContent = text;
     }
+    document.querySelector('#install').addEventListener('click', installExtension);
     (function(__iced_k) {
       __iced_deferrals = new iced.Deferrals(__iced_k, {
         parent: ___iced_passed_deferral
@@ -77,11 +47,10 @@
             return __slot_1.uglify = arguments[0];
           };
         })(root),
-        lineno: 23
+        lineno: 29
       }));
       __iced_deferrals._fulfill();
     })(function() {
-      document.querySelector('#install').addEventListener('click', installExtension);
       if (location.hash) {
         url = location.hash.substr(1);
         document.querySelector('#external-script').style.display = 'block';
@@ -98,18 +67,33 @@
                 return script = arguments[1];
               };
             })(),
-            lineno: 34
+            lineno: 40
           })));
           __iced_deferrals._fulfill();
         })(function() {
+          root.script = script;
           if (!success) {
             console.log("UJS Packager: Failed to download " + url);
             return;
           }
           config = getConfig(script, url);
-          buildExtension(script, config);
-          document.querySelector('#done').style.display = 'inline';
-          return __iced_k(showInstallButton(config.name));
+          (function(__iced_k) {
+            __iced_deferrals = new iced.Deferrals(__iced_k, {
+              parent: ___iced_passed_deferral
+            });
+            buildExtension(script, config, __iced_deferrals.defer({
+              assign_fn: (function(__slot_1) {
+                return function() {
+                  return __slot_1.extension = arguments[0];
+                };
+              })(root),
+              lineno: 49
+            }));
+            __iced_deferrals._fulfill();
+          })(function() {
+            document.querySelector('#done').style.display = 'inline';
+            return __iced_k(typeof extension !== "undefined" && extension !== null ? showInstallButton(config.name) : document.querySelector('#done').textContent = 'failed.');
+          });
         });
       } else {
         document.querySelector('#upload-script').style.display = 'block';
@@ -123,11 +107,11 @@
           scripts = [];
           configs = [];
           files = (function() {
-            var _i, _len, _ref, _ref1, _results;
-            _ref1 = (_ref = e.target.files) != null ? _ref : e.dataTransfer.files;
+            var _i, _len, _ref, _ref1, _ref2, _results;
+            _ref2 = (_ref = (_ref1 = e.dataTransfer) != null ? _ref1.files : void 0) != null ? _ref : e.target.files;
             _results = [];
-            for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-              file = _ref1[_i];
+            for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+              file = _ref2[_i];
               if (file.type.match('application/x-javascript')) _results.push(file);
             }
             return _results;
@@ -166,7 +150,7 @@
                         return s = arguments[0];
                       };
                     })(),
-                    lineno: 56
+                    lineno: 72
                   }));
                   __iced_deferrals._fulfill();
                 })(function() {
@@ -177,8 +161,26 @@
             };
             _while(__iced_k);
           })(function() {
-            buildExtension(scripts, configs);
-            if (root.extension != null) return showInstallButton(configs[0].name);
+            root.scripts = scripts;
+            (function(__iced_k) {
+              __iced_deferrals = new iced.Deferrals(__iced_k, {
+                parent: ___iced_passed_deferral1,
+                funcname: "handleFileSelect"
+              });
+              buildExtension(scripts, configs, __iced_deferrals.defer({
+                assign_fn: (function(__slot_1) {
+                  return function() {
+                    return __slot_1.extension = arguments[0];
+                  };
+                })(root),
+                lineno: 78
+              }));
+              __iced_deferrals._fulfill();
+            })(function() {
+              if (typeof extension !== "undefined" && extension !== null) {
+                return showInstallButton(configs[0].name);
+              }
+            });
           });
         };
         document.body.addEventListener('dragover', function(e) {
@@ -207,6 +209,14 @@
     return document.querySelector('#install-instructions').style.display = 'none';
   };
 
+  showError = function(msg) {
+    var p;
+    p = document.createElement('p');
+    p.textContent = msg;
+    p.className = 'error';
+    return document.querySelector('#generated-script').appendChild(p);
+  };
+
   readFile = function(file, callback) {
     var reader;
     reader = new FileReader;
@@ -216,36 +226,214 @@
     return reader.readAsText(file);
   };
 
-  buildExtension = function(scripts, configs) {
-    var i, includes, output, p, pre, s, zip, _i, _j, _len, _len1;
+  buildExtension = function(scripts, configs, callback) {
+    var i, li, name, output, pre, prefDefs, s, scriptPrefs, text, type, ul, value, zip, ___iced_passed_deferral, __iced_deferrals, __iced_k, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3,
+      _this = this;
+    __iced_k = __iced_k_noop;
+    ___iced_passed_deferral = iced.findDeferral(arguments);
     output = document.querySelector('#generated-script');
     output.innerHTML = '';
-    if (scripts.length === 0) {
-      p = document.createElement('p');
-      p.textContent = 'Error: None of the given files were scripts.';
-      output.appendChild(p);
+    if (!(scripts != null) || scripts.length === 0) {
+      showError('Error: None of the given files were scripts.');
       return;
     }
     if (!Array.isArray(scripts)) scripts = [scripts];
     if (!Array.isArray(configs)) configs = [configs];
+    root.prefs = [];
     for (i = _i = 0, _len = scripts.length; _i < _len; i = ++_i) {
       s = scripts[i];
+      _ref = replacePreferences(s), s = _ref[0], prefs[i] = _ref[1];
       scripts[i] = fixScript(s, configs[i].greasemonkey);
       if (i > 0) output.appendChild(document.createElement('br'));
+      if (prefs[i].length > 0) {
+        ul = document.createElement('ul');
+        ul.style.display = 'none';
+        _ref1 = prefs[i];
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          _ref2 = _ref1[_j], name = _ref2[0], value = _ref2[1], text = _ref2[2], type = _ref2[3];
+          li = document.createElement('li');
+          li.textContent = "" + name + " (" + type + ")";
+          ul.appendChild(li);
+        }
+        output.appendChild(ul);
+      }
       pre = document.createElement('pre');
-      pre.textContent = scripts[i];
+      pre.textContent = (_ref3 = scripts[i]) != null ? _ref3 : '// Failed to generate script. Original code:\n\n' + s;
       sh_highlightElement(pre, sh_languages.javascript);
       output.appendChild(pre);
     }
+    scripts = scripts.filter(function(x) {
+      return x != null;
+    });
+    if (scripts.length === 0) if (typeof callback === "function") callback(null);
     zip = new JSZip;
-    zip.file('config.xml', getConfigXml(configs[0]));
-    zip.file('index.html', '<!doctype html>');
-    includes = zip.folder('includes');
-    for (i = _j = 0, _len1 = scripts.length; _j < _len1; i = ++_j) {
+    root.files = {
+      'config.xml': getConfigXml(configs[0]),
+      js: {},
+      css: {},
+      includes: {}
+    };
+    for (i = _k = 0, _len2 = scripts.length; _k < _len2; i = ++_k) {
       s = scripts[i];
-      includes.file("" + configs[i].name + ".js", s);
+      files.includes["" + configs[i].name + ".js"] = s;
     }
-    return root.extension = zip.generate();
+    (function(__iced_k) {
+      if (prefs.reduce((function(prev, curr) {
+        return !!prev || curr.length > 0;
+      }), false)) {
+        (function(__iced_k) {
+          __iced_deferrals = new iced.Deferrals(__iced_k, {
+            parent: ___iced_passed_deferral,
+            funcname: "buildExtension"
+          });
+          bg.file('/package/index-prefs.html', __iced_deferrals.defer({
+            assign_fn: (function(__slot_1, __slot_2) {
+              return function() {
+                return __slot_1[__slot_2] = arguments[0];
+              };
+            })(files, 'index.html'),
+            lineno: 183
+          }));
+          __iced_deferrals._fulfill();
+        })(function() {
+          (function(__iced_k) {
+            __iced_deferrals = new iced.Deferrals(__iced_k, {
+              parent: ___iced_passed_deferral,
+              funcname: "buildExtension"
+            });
+            bg.file('/package/options.html', __iced_deferrals.defer({
+              assign_fn: (function(__slot_1, __slot_2) {
+                return function() {
+                  return __slot_1[__slot_2] = arguments[0];
+                };
+              })(files, 'options.html'),
+              lineno: 184
+            }));
+            __iced_deferrals._fulfill();
+          })(function() {
+            (function(__iced_k) {
+              __iced_deferrals = new iced.Deferrals(__iced_k, {
+                parent: ___iced_passed_deferral,
+                funcname: "buildExtension"
+              });
+              bg.file('/package/css/options.css', __iced_deferrals.defer({
+                assign_fn: (function(__slot_1, __slot_2) {
+                  return function() {
+                    return __slot_1[__slot_2] = arguments[0];
+                  };
+                })(files.css, 'options.css'),
+                lineno: 185
+              }));
+              __iced_deferrals._fulfill();
+            })(function() {
+              (function(__iced_k) {
+                __iced_deferrals = new iced.Deferrals(__iced_k, {
+                  parent: ___iced_passed_deferral,
+                  funcname: "buildExtension"
+                });
+                bg.file('/package/js/options.js', __iced_deferrals.defer({
+                  assign_fn: (function(__slot_1, __slot_2) {
+                    return function() {
+                      return __slot_1[__slot_2] = arguments[0];
+                    };
+                  })(files.js, 'options.js'),
+                  lineno: 186
+                }));
+                __iced_deferrals._fulfill();
+              })(function() {
+                (function(__iced_k) {
+                  __iced_deferrals = new iced.Deferrals(__iced_k, {
+                    parent: ___iced_passed_deferral,
+                    funcname: "buildExtension"
+                  });
+                  bg.file('/package/js/options_page.js', __iced_deferrals.defer({
+                    assign_fn: (function(__slot_1, __slot_2) {
+                      return function() {
+                        return __slot_1[__slot_2] = arguments[0];
+                      };
+                    })(files.js, 'options_page.js'),
+                    lineno: 187
+                  }));
+                  __iced_deferrals._fulfill();
+                })(function() {
+                  (function(__iced_k) {
+                    __iced_deferrals = new iced.Deferrals(__iced_k, {
+                      parent: ___iced_passed_deferral,
+                      funcname: "buildExtension"
+                    });
+                    bg.file('/package/js/storage.js', __iced_deferrals.defer({
+                      assign_fn: (function(__slot_1, __slot_2) {
+                        return function() {
+                          return __slot_1[__slot_2] = arguments[0];
+                        };
+                      })(files.js, 'storage.js'),
+                      lineno: 190
+                    }));
+                    __iced_deferrals._fulfill();
+                  })(function() {
+                    prefDefs = (function() {
+                      var _l, _len3, _results;
+                      _results = [];
+                      for (i = _l = 0, _len3 = prefs.length; _l < _len3; i = ++_l) {
+                        scriptPrefs = prefs[i];
+                        _results.push((function() {
+                          var _len4, _m, _ref4, _results1;
+                          _results1 = [];
+                          for (_m = 0, _len4 = scriptPrefs.length; _m < _len4; _m++) {
+                            _ref4 = scriptPrefs[_m], name = _ref4[0], value = _ref4[1], text = _ref4[2], type = _ref4[3];
+                            _results1.push("['" + name + "', " + (JSON.stringify(value)) + ", '" + text + "', '" + type + "']");
+                          }
+                          return _results1;
+                        })());
+                      }
+                      return _results;
+                    })();
+                    prefDefs = prefDefs.join(',\n\t');
+                    return __iced_k(files.js['default_settings.js'] = "var defaults = [ \n\t" + prefDefs + " \n]; var storage = new SettingStorage(defaults);");
+                  });
+                });
+              });
+            });
+          });
+        });
+      } else {
+        (function(__iced_k) {
+          __iced_deferrals = new iced.Deferrals(__iced_k, {
+            parent: ___iced_passed_deferral,
+            funcname: "buildExtension"
+          });
+          bg.file('/package/index.html', __iced_deferrals.defer({
+            assign_fn: (function(__slot_1, __slot_2) {
+              return function() {
+                return __slot_1[__slot_2] = arguments[0];
+              };
+            })(files, 'index.html'),
+            lineno: 196
+          }));
+          __iced_deferrals._fulfill();
+        })(__iced_k);
+      }
+    })(function() {
+      addDirectoryToZip(zip, files);
+      return typeof callback === "function" ? callback(zip.generate()) : void 0;
+    });
+  };
+
+  addDirectoryToZip = function(zip, dir) {
+    var file, folder, name, _results;
+    _results = [];
+    for (name in dir) {
+      file = dir[name];
+      if (typeof file === 'string') {
+        _results.push(zip.file(name, file));
+      } else if (!isEmpty(file)) {
+        folder = zip.folder(name);
+        _results.push(addDirectoryToZip(folder, file));
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
   };
 
   installExtension = function() {
@@ -264,18 +452,45 @@
   };
 
   fixScript = function(script, isGreaseMonkey) {
-    var ast, meta, pro;
+    var ast, meta, msg, pro;
     pro = uglify.uglify;
-    meta = getMetadata(script)[0];
-    ast = uglify.parser.parse(script);
-    root.ast = ast;
-    ast = fixGlobals(ast);
-    ast = removeClosure(ast);
-    root.ast = ast;
+    try {
+      meta = getMetadata(script)[0];
+      ast = uglify.parser.parse(script);
+      ast = fixGlobals(ast);
+      ast = removeClosure(ast);
+      root.ast = ast;
+    } catch (error) {
+      if (error.col != null) {
+        msg = "" + error.message + " at line " + error.line + ", position " + error.pos + ".";
+        if (error.message === 'Unexpected token: operator (<)' && error.line === 1 && error.pos === 1) {
+          msg += ' (This file doesn\'t look like JavaScript.)';
+        }
+      } else {
+        msg = error.message;
+      }
+      showError(msg);
+      return null;
+    }
     if (isGreaseMonkey) ast = wrapWithLoadedEvent(ast);
     return meta + '\n\n' + uglify.uglify.gen_code(ast, {
       beautify: true
     });
+  };
+
+  replacePreferences = function(script) {
+    var pattern, prefs;
+    pattern = /(var[\s\n]+|^\s*)(\w+[\w\d])*\s*=\s*.*\/\*\s*@\s*(.+)\s*@\s*(\w+)\s*@\s*\*\/(.+)\/\*\s*@\s*\*\/(.+)/mg;
+    prefs = [];
+    script = script.replace(pattern, function(match, prefix, name, text, type, value, postfix) {
+      if ((type === 'string' || type === 'color') && value[0] !== '"') {
+        value = value.replace(/^'|'$/g, '');
+        value = "\"" + value + "\"";
+      }
+      prefs.push([name, JSON.parse(value), text, type]);
+      return "" + prefix + name + " = JSON.parse(widget.preferences['" + name + "'])" + postfix;
+    });
+    return [script, prefs];
   };
 
   root.fixGlobals = function(ast) {
@@ -290,13 +505,17 @@
     };
     is_global = function(name) {
       var currentScope;
-      if (scope.uses_with || scope.uses_eval) return false;
-      if (name === 'this' || name === 'arguments' || name === 'null' || name === 'true' || name === 'false' || name === 'undefined' || name === 'window' || name === 'document' || name === 'Function' || name === 'Object' || name === 'Array' || name === 'String' || name === 'Number' || name === 'Math') {
+      if (name === 'this' || name === 'arguments' || name === 'null' || name === 'true' || name === 'false' || name === 'undefined' || name === 'window' || name === 'document' || name === 'widget' || name === 'opera' || name === 'Function' || name === 'Object' || name === 'Array' || name === 'String' || name === 'Number' || name === 'Math') {
         return false;
       }
       currentScope = scope;
       while (currentScope.parent != null) {
         if (name in currentScope.names) return false;
+        currentScope = currentScope.parent;
+      }
+      currentScope = scope;
+      while (currentScope != null) {
+        if (currentScope.uses_with) return false;
         currentScope = currentScope.parent;
       }
       return true;
@@ -305,14 +524,14 @@
       body = with_scope(body.scope, function() {
         return MAP(body, walk);
       });
-      if (name && this[0] === 'defun' && !(scope.parent != null)) {
+      if (name && this[0] === 'defun' && !(scope.parent != null) && !scope.uses_with) {
         return ['stat', ['assign', true, windowDot(name), ['function', null, args, body]]];
       } else {
         return [this[0], name, args, body];
       }
     };
     _vardefs = function(defs) {
-      if (!(scope.parent != null)) {
+      if (!(scope.parent != null) && !scope.uses_with) {
         return [
           'splice', MAP(defs, function(d) {
             var value, _ref;
@@ -438,6 +657,11 @@
     }
     if (!(name != null)) name = url.split('/').pop().replace(/(\.user)?\.js/, '');
     if (!(version != null)) version = '1.0';
+    if (root.incrementVersion) {
+      version = version + '.' + root.currentVersion;
+      root.currentVersion += 1;
+      sessionStorage['version'] = root.currentVersion;
+    }
     if (!(description != null)) description = "User JavaScript: " + url;
     if (!(namespace != null)) {
       namespace = "" + urlParts.protocol + "://" + urlParts.domain;
@@ -490,6 +714,18 @@
 
   String.prototype.encodeHTML = function() {
     return this.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  };
+
+  isEmpty = function(o) {
+    var key;
+    if (o.length != null) {
+      if (o.length > 0) return false;
+      if (o.length === 0) return true;
+    }
+    for (key in o) {
+      return false;
+    }
+    return true;
   };
 
   areArgsEqual = function(a, b) {

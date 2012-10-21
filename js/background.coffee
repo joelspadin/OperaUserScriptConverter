@@ -19,9 +19,17 @@ root.get = (url, callback) ->
 	xhr.responseType = 'text'
 	
 	xhr.onload = (e) ->
-		if this.status == 200
+		if this.status == 200 or this.status == 0
 			callback true, this.responseText
 		else
 			callback false, this
 
 	xhr.send()
+
+root.file = (path, callback) ->
+	root.get path, (success, file) ->
+		if success
+			callback?(file)
+		else
+			console.log "UJS Packager: Could not load file \"#{path}\""
+			callback?('')
