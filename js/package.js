@@ -1,7 +1,42 @@
 (function() {
-  var addDirectoryToZip, areArgsEqual, buildExtension, fixScript, getConfig, getConfigXml, getMetadata, hideInstallButton, iced, installExtension, isEmpty, parseURL, readFile, replacePreferences, root, showError, showInstallButton, __iced_k, __iced_k_noop;
+  var addDirectoryToZip, areArgsEqual, buildExtension, fixScript, getConfig, getConfigXml, getMetadata, hideInstallButton, iced, installExtension, isEmpty, parseURL, readFile, replacePreferences, root, showError, showInstallButton, __iced_k, __iced_k_noop,
+    __slice = [].slice;
 
-  iced = require('iced-coffee-script').iced;
+  iced = {
+    Deferrals: (function() {
+
+      function _Class(_arg) {
+        this.continuation = _arg;
+        this.count = 1;
+        this.ret = null;
+      }
+
+      _Class.prototype._fulfill = function() {
+        if (!--this.count) return this.continuation(this.ret);
+      };
+
+      _Class.prototype.defer = function(defer_params) {
+        var _this = this;
+        ++this.count;
+        return function() {
+          var inner_params, _ref;
+          inner_params = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+          if (defer_params != null) {
+            if ((_ref = defer_params.assign_fn) != null) {
+              _ref.apply(null, inner_params);
+            }
+          }
+          return _this._fulfill();
+        };
+      };
+
+      return _Class;
+
+    })(),
+    findDeferral: function() {
+      return null;
+    }
+  };
   __iced_k = __iced_k_noop = function() {};
 
   root = this;
@@ -14,7 +49,7 @@
 
   root.extension = null;
 
-  root.incrementVersion = false;
+  root.incrementVersion = true;
 
   root.currentVersion = JSON.parse(sessionStorage['version'] || '0');
 
@@ -457,6 +492,7 @@
     try {
       meta = getMetadata(script)[0];
       ast = uglify.parser.parse(script);
+      if (isGreaseMonkey) ast = wrapWithLoadedEvent(ast);
       ast = fixGlobals(ast);
       ast = removeClosure(ast);
       root.ast = ast;
@@ -472,7 +508,6 @@
       showError(msg);
       return null;
     }
-    if (isGreaseMonkey) ast = wrapWithLoadedEvent(ast);
     return meta + '\n\n' + uglify.uglify.gen_code(ast, {
       beautify: true
     });
@@ -612,7 +647,7 @@
   root.wrapWithLoadedEvent = function(ast) {
     var body;
     body = ast[1];
-    return ['toplevel', [['stat', ['call', ['dot', ['name', 'window'], 'addEventListener'], [['string', 'DOMContentLoaded'], ['function', null, [], body], ['name', 'false']]]]]];
+    return ['toplevel', [['stat', ['call', ['dot', ['dot', ['name', 'window'], 'opera'], 'addEventListener'], [['string', 'BeforeEvent.DOMContentLoaded'], ['function', null, [], body], ['name', 'false']]]]]];
   };
 
   getMetadata = function(script) {

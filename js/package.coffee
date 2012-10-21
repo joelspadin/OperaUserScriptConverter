@@ -6,7 +6,7 @@ root.bg = oex.bgProcess
 root.blocksExtensionDownloads = parseFloat(opera.version()) >= 12.10
 root.extension = null
 
-root.incrementVersion = false
+root.incrementVersion = true
 root.currentVersion = JSON.parse(sessionStorage['version'] or '0')
 
 require.config
@@ -233,6 +233,10 @@ fixScript = (script, isGreaseMonkey) ->
 		meta = getMetadata(script)[0]
 		ast = uglify.parser.parse(script)
 	
+		# Wrap GreaseMonkey scripts in a DOMContentLoaded event
+		if isGreaseMonkey
+			ast = wrapWithLoadedEvent(ast)
+
 		# fix the script
 		ast = fixGlobals(ast)
 		ast = removeClosure(ast)
@@ -249,9 +253,7 @@ fixScript = (script, isGreaseMonkey) ->
 		showError(msg)
 		return null
 
-	# Wrap GreaseMonkey scripts in a DOMContentLoaded event
-	if isGreaseMonkey
-		ast = wrapWithLoadedEvent(ast)
+	
 
 	return meta + '\n\n' + uglify.uglify.gen_code(ast, { beautify: true })
 
@@ -408,9 +410,9 @@ root.wrapWithLoadedEvent = (ast) ->
 		[
 			['stat', 
 				['call', 
-					['dot', ['name', 'window'], 'addEventListener']
+					['dot', ['dot', ['name', 'window'], 'opera'], 'addEventListener']
 					[
-						['string', 'DOMContentLoaded'],
+						['string', 'BeforeEvent.DOMContentLoaded'],
 						['function', null, [], body],
 						['name', 'false'],
 					]
