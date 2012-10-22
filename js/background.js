@@ -24,26 +24,49 @@
 
   root.get = function(url, callback) {
     var xhr;
-    xhr = new XMLHttpRequest;
-    xhr.open('get', url, true);
-    xhr.responseType = 'text';
-    xhr.onload = function(e) {
-      if (this.status === 200 || this.status === 0) {
-        return callback(true, this.responseText);
-      } else {
-        return callback(false, this);
-      }
-    };
-    return xhr.send();
+    try {
+      xhr = new XMLHttpRequest;
+      xhr.open('get', url, true);
+      xhr.responseType = 'text';
+      xhr.onload = function(e) {
+        if (this.status === 200 || this.status === 0) {
+          return callback(true, this.responseText);
+        } else {
+          return callback(false, this);
+        }
+      };
+      return xhr.send();
+    } catch (e) {
+      return callback(false, e);
+    }
+  };
+
+  root.getImage = function(url, callback) {
+    var xhr;
+    try {
+      xhr = new XMLHttpRequest;
+      xhr.open('get', url, true);
+      xhr.responseType = 'arraybuffer';
+      xhr.onload = function(e) {
+        if (this.status === 200 || this.status === 0) {
+          return callback(this.response);
+        } else {
+          return callback(null);
+        }
+      };
+      return xhr.send();
+    } catch (e) {
+      return callback(null);
+    }
   };
 
   root.file = function(path, callback) {
     return root.get(path, function(success, file) {
       if (success) {
-        return typeof callback === "function" ? callback(file) : void 0;
+        return callback(file);
       } else {
         console.log("UJS Packager: Could not load file \"" + path + "\"");
-        return typeof callback === "function" ? callback('') : void 0;
+        return callback('');
       }
     });
   };

@@ -1,5 +1,5 @@
 (function() {
-  var addDirectoryToZip, areArgsEqual, buildExtension, fixScript, getConfig, getConfigXml, getMetadata, hideInstallButton, iced, installExtension, isEmpty, parseURL, readFile, replacePreferences, root, showError, showInstallButton, __iced_k, __iced_k_noop,
+  var addDirectoryToZip, areArgsEqual, base64ArrayBuffer, buildExtension, fixScript, getConfig, getConfigXml, getMetadata, hideInstallButton, iced, installExtension, isEmpty, parseURL, readFile, replacePreferences, root, showError, showInstallButton, __iced_k, __iced_k_noop,
     __slice = [].slice;
 
   iced = {
@@ -49,7 +49,7 @@
 
   root.extension = null;
 
-  root.incrementVersion = true;
+  root.incrementVersion = false;
 
   root.currentVersion = JSON.parse(sessionStorage['version'] || '0');
 
@@ -262,7 +262,7 @@
   };
 
   buildExtension = function(scripts, configs, callback) {
-    var i, li, name, output, pre, prefDefs, s, scriptPrefs, text, type, ul, value, zip, ___iced_passed_deferral, __iced_deferrals, __iced_k, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3,
+    var i, icon, li, name, output, pre, prefDefs, s, scriptPrefs, text, type, ul, value, zip, ___iced_passed_deferral, __iced_deferrals, __iced_k, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3,
       _this = this;
     __iced_k = __iced_k_noop;
     ___iced_passed_deferral = iced.findDeferral(arguments);
@@ -304,8 +304,9 @@
     zip = new JSZip;
     root.files = {
       'config.xml': getConfigXml(configs[0]),
-      js: {},
       css: {},
+      js: {},
+      img: {},
       includes: {}
     };
     for (i = _k = 0, _len2 = scripts.length; _k < _len2; i = ++_k) {
@@ -313,36 +314,44 @@
       files.includes["" + configs[i].name + ".js"] = s;
     }
     (function(__iced_k) {
-      if (prefs.reduce((function(prev, curr) {
-        return !!prev || curr.length > 0;
-      }), false)) {
+      if (configs[0].icon != null) {
         (function(__iced_k) {
           __iced_deferrals = new iced.Deferrals(__iced_k, {
             parent: ___iced_passed_deferral,
             funcname: "buildExtension"
           });
-          bg.file('/package/index-prefs.html', __iced_deferrals.defer({
-            assign_fn: (function(__slot_1, __slot_2) {
+          bg.getImage(configs[0].icon, __iced_deferrals.defer({
+            assign_fn: (function() {
               return function() {
-                return __slot_1[__slot_2] = arguments[0];
+                return icon = arguments[0];
               };
-            })(files, 'index.html'),
+            })(),
             lineno: 183
           }));
           __iced_deferrals._fulfill();
         })(function() {
+          return __iced_k(typeof icon !== "undefined" && icon !== null ? files.img['icon.png'] = 'data:image/png,base64;' + base64ArrayBuffer(icon) : (showError("Failed to download image \"" + configs[0].icon + "\""), console.log("UJS Packager: Failed to download image \"" + configs[0].icon + "\"")));
+        });
+      } else {
+        return __iced_k();
+      }
+    })(function() {
+      (function(__iced_k) {
+        if (prefs.reduce((function(prev, curr) {
+          return !!prev || curr.length > 0;
+        }), false)) {
           (function(__iced_k) {
             __iced_deferrals = new iced.Deferrals(__iced_k, {
               parent: ___iced_passed_deferral,
               funcname: "buildExtension"
             });
-            bg.file('/package/options.html', __iced_deferrals.defer({
+            bg.file('/package/index-prefs.html', __iced_deferrals.defer({
               assign_fn: (function(__slot_1, __slot_2) {
                 return function() {
                   return __slot_1[__slot_2] = arguments[0];
                 };
-              })(files, 'options.html'),
-              lineno: 184
+              })(files, 'index.html'),
+              lineno: 192
             }));
             __iced_deferrals._fulfill();
           })(function() {
@@ -351,13 +360,13 @@
                 parent: ___iced_passed_deferral,
                 funcname: "buildExtension"
               });
-              bg.file('/package/css/options.css', __iced_deferrals.defer({
+              bg.file('/package/options.html', __iced_deferrals.defer({
                 assign_fn: (function(__slot_1, __slot_2) {
                   return function() {
                     return __slot_1[__slot_2] = arguments[0];
                   };
-                })(files.css, 'options.css'),
-                lineno: 185
+                })(files, 'options.html'),
+                lineno: 193
               }));
               __iced_deferrals._fulfill();
             })(function() {
@@ -366,13 +375,13 @@
                   parent: ___iced_passed_deferral,
                   funcname: "buildExtension"
                 });
-                bg.file('/package/js/options.js', __iced_deferrals.defer({
+                bg.file('/package/css/options.css', __iced_deferrals.defer({
                   assign_fn: (function(__slot_1, __slot_2) {
                     return function() {
                       return __slot_1[__slot_2] = arguments[0];
                     };
-                  })(files.js, 'options.js'),
-                  lineno: 186
+                  })(files.css, 'options.css'),
+                  lineno: 194
                 }));
                 __iced_deferrals._fulfill();
               })(function() {
@@ -381,13 +390,13 @@
                     parent: ___iced_passed_deferral,
                     funcname: "buildExtension"
                   });
-                  bg.file('/package/js/options_page.js', __iced_deferrals.defer({
+                  bg.file('/package/js/options.js', __iced_deferrals.defer({
                     assign_fn: (function(__slot_1, __slot_2) {
                       return function() {
                         return __slot_1[__slot_2] = arguments[0];
                       };
-                    })(files.js, 'options_page.js'),
-                    lineno: 187
+                    })(files.js, 'options.js'),
+                    lineno: 195
                   }));
                   __iced_deferrals._fulfill();
                 })(function() {
@@ -396,74 +405,101 @@
                       parent: ___iced_passed_deferral,
                       funcname: "buildExtension"
                     });
-                    bg.file('/package/js/storage.js', __iced_deferrals.defer({
+                    bg.file('/package/js/options_page.js', __iced_deferrals.defer({
                       assign_fn: (function(__slot_1, __slot_2) {
                         return function() {
                           return __slot_1[__slot_2] = arguments[0];
                         };
-                      })(files.js, 'storage.js'),
-                      lineno: 190
+                      })(files.js, 'options_page.js'),
+                      lineno: 196
                     }));
                     __iced_deferrals._fulfill();
                   })(function() {
-                    prefDefs = (function() {
-                      var _l, _len3, _results;
-                      _results = [];
-                      for (i = _l = 0, _len3 = prefs.length; _l < _len3; i = ++_l) {
-                        scriptPrefs = prefs[i];
-                        _results.push((function() {
-                          var _len4, _m, _ref4, _results1;
-                          _results1 = [];
-                          for (_m = 0, _len4 = scriptPrefs.length; _m < _len4; _m++) {
-                            _ref4 = scriptPrefs[_m], name = _ref4[0], value = _ref4[1], text = _ref4[2], type = _ref4[3];
-                            _results1.push("['" + name + "', " + (JSON.stringify(value)) + ", '" + text + "', '" + type + "']");
-                          }
-                          return _results1;
-                        })());
-                      }
-                      return _results;
-                    })();
-                    prefDefs = prefDefs.join(',\n\t');
-                    return __iced_k(files.js['default_settings.js'] = "var defaults = [ \n\t" + prefDefs + " \n]; var storage = new SettingStorage(defaults);");
+                    (function(__iced_k) {
+                      __iced_deferrals = new iced.Deferrals(__iced_k, {
+                        parent: ___iced_passed_deferral,
+                        funcname: "buildExtension"
+                      });
+                      bg.file('/package/js/storage.js', __iced_deferrals.defer({
+                        assign_fn: (function(__slot_1, __slot_2) {
+                          return function() {
+                            return __slot_1[__slot_2] = arguments[0];
+                          };
+                        })(files.js, 'storage.js'),
+                        lineno: 199
+                      }));
+                      __iced_deferrals._fulfill();
+                    })(function() {
+                      prefDefs = (function() {
+                        var _l, _len3, _results;
+                        _results = [];
+                        for (i = _l = 0, _len3 = prefs.length; _l < _len3; i = ++_l) {
+                          scriptPrefs = prefs[i];
+                          _results.push((function() {
+                            var _len4, _m, _ref4, _results1;
+                            _results1 = [];
+                            for (_m = 0, _len4 = scriptPrefs.length; _m < _len4; _m++) {
+                              _ref4 = scriptPrefs[_m], name = _ref4[0], value = _ref4[1], text = _ref4[2], type = _ref4[3];
+                              _results1.push("['" + name + "', " + (JSON.stringify(value)) + ", '" + text + "', '" + type + "']");
+                            }
+                            return _results1;
+                          })());
+                        }
+                        return _results;
+                      })();
+                      prefDefs = prefDefs.join(',\n\t');
+                      return __iced_k(files.js['default_settings.js'] = "var defaults = [ \n\t" + prefDefs + " \n]; var storage = new SettingStorage(defaults);");
+                    });
                   });
                 });
               });
             });
           });
-        });
-      } else {
-        (function(__iced_k) {
-          __iced_deferrals = new iced.Deferrals(__iced_k, {
-            parent: ___iced_passed_deferral,
-            funcname: "buildExtension"
-          });
-          bg.file('/package/index.html', __iced_deferrals.defer({
-            assign_fn: (function(__slot_1, __slot_2) {
-              return function() {
-                return __slot_1[__slot_2] = arguments[0];
-              };
-            })(files, 'index.html'),
-            lineno: 196
-          }));
-          __iced_deferrals._fulfill();
-        })(__iced_k);
-      }
-    })(function() {
-      addDirectoryToZip(zip, files);
-      return typeof callback === "function" ? callback(zip.generate()) : void 0;
+        } else {
+          (function(__iced_k) {
+            __iced_deferrals = new iced.Deferrals(__iced_k, {
+              parent: ___iced_passed_deferral,
+              funcname: "buildExtension"
+            });
+            bg.file('/package/index.html', __iced_deferrals.defer({
+              assign_fn: (function(__slot_1, __slot_2) {
+                return function() {
+                  return __slot_1[__slot_2] = arguments[0];
+                };
+              })(files, 'index.html'),
+              lineno: 205
+            }));
+            __iced_deferrals._fulfill();
+          })(__iced_k);
+        }
+      })(function() {
+        addDirectoryToZip(zip, files);
+        return typeof callback === "function" ? callback(zip.generate()) : void 0;
+      });
     });
   };
 
   addDirectoryToZip = function(zip, dir) {
-    var file, folder, name, _results;
+    var data, file, folder, name, sep, type, _ref, _results;
     _results = [];
     for (name in dir) {
       file = dir[name];
-      if (typeof file === 'string') {
-        _results.push(zip.file(name, file));
-      } else if (!isEmpty(file)) {
-        folder = zip.folder(name);
-        _results.push(addDirectoryToZip(folder, file));
+      if (file != null) {
+        if (typeof file === 'string') {
+          if (file.indexOf('data:') === 0) {
+            _ref = file.partition(';'), type = _ref[0], sep = _ref[1], data = _ref[2];
+            _results.push(zip.file(name, data, {
+              base64: type.indexOf('base64') > 0
+            }));
+          } else {
+            _results.push(zip.file(name, file));
+          }
+        } else if (!isEmpty(file)) {
+          folder = zip.folder(name);
+          _results.push(addDirectoryToZip(folder, file));
+        } else {
+          _results.push(void 0);
+        }
       } else {
         _results.push(void 0);
       }
@@ -661,7 +697,7 @@
   };
 
   getConfig = function(script, url) {
-    var author, data, description, line, metadata, metapart, name, namespace, tag, urlParts, version, _i, _len, _ref, _ref1;
+    var author, data, description, icon, line, metadata, metapart, name, namespace, tag, urlParts, version, _i, _len, _ref, _ref1;
     urlParts = parseURL(url);
     metadata = getMetadata(script)[1];
     if (metadata != null) {
@@ -686,6 +722,9 @@
               break;
             case 'version':
               version = data;
+              break;
+            case 'icon':
+              icon = data;
           }
         }
       }
@@ -702,24 +741,31 @@
       namespace = "" + urlParts.protocol + "://" + urlParts.domain;
     }
     if (!(author != null)) author = urlParts.domain;
+    if (!(icon != null)) icon = null;
     return {
       name: name,
       version: version,
       description: description,
       namespace: namespace,
       author: author,
+      icon: icon,
       greasemonkey: url.indexOf('.user.js') >= 0
     };
   };
 
   getConfigXml = function(config) {
-    var href;
+    var href, icon;
     if (config.namespace.indexOf('://') >= 0) {
       href = " href=\"" + (config.namespace.encodeHTML()) + "\"";
     } else {
       href = '';
     }
-    return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<widget xmlns=\"http://www.w3.org/ns/widgets\" version=\"" + (config.version.encodeHTML()) + "\" id=\"extensions:" + (config.name.encodeHTML()) + "\">\n	<name>" + (config.name.encodeHTML()) + "</name>\n	<description>" + (config.description.encodeHTML()) + "</description>\n	<author" + href + ">" + (config.author.encodeHTML()) + "</author>\n</widget>";
+    if (config.icon != null) {
+      icon = '<icon src="img/icon.png" />';
+    } else {
+      icon = '';
+    }
+    return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<widget xmlns=\"http://www.w3.org/ns/widgets\" version=\"" + (config.version.encodeHTML()) + "\" id=\"extensions:" + (config.name.encodeHTML()) + "\">\n	<name>" + (config.name.encodeHTML()) + "</name>\n	<description>" + (config.description.encodeHTML()) + "</description>\n	<author" + href + ">" + (config.author.encodeHTML()) + "</author>\n	" + icon + "\n</widget>";
   };
 
   parseURL = function(url) {
@@ -735,6 +781,37 @@
       query: query,
       hash: hash
     };
+  };
+
+  base64ArrayBuffer = function(arrayBuffer) {
+    var a, b, base64, byteLength, byteRemainder, bytes, c, chunk, d, encodings, i, mainLength, _i, _ref;
+    base64 = '';
+    encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    bytes = new Uint8Array(arrayBuffer);
+    byteLength = bytes.byteLength;
+    byteRemainder = byteLength % 3;
+    mainLength = byteLength - byteRemainder;
+    for (i = _i = 0, _ref = mainLength; _i <= _ref; i = _i += 3) {
+      chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+      a = (chunk & 16515072) >> 18;
+      b = (chunk & 258048) >> 12;
+      c = (chunk & 4032) >> 6;
+      d = chunk & 63;
+      base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
+    }
+    if (byteRemainder === 1) {
+      chunk = bytes[mainLength];
+      a = (chunk & 252) >> 2;
+      b = (chunk & 3) << 4;
+      base64 += encodings[a] + encodings[b] + '==';
+    } else if (byteRemainder === 2) {
+      chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
+      a = (chunk & 64512) >> 10;
+      b = (chunk & 1008) >> 4;
+      c = (chunk & 15) << 2;
+      base64 += encodings[a] + encodings[b] + encodings[c] + '=';
+    }
+    return base64;
   };
 
   String.prototype.partition = function(sep) {

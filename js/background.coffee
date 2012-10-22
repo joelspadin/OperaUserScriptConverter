@@ -14,22 +14,42 @@ messageHandlers =
 
 
 root.get = (url, callback) ->
-	xhr = new XMLHttpRequest
-	xhr.open 'get', url, true
-	xhr.responseType = 'text'
+	try
+		xhr = new XMLHttpRequest
+		xhr.open 'get', url, true
+		xhr.responseType = 'text'
 	
-	xhr.onload = (e) ->
-		if this.status == 200 or this.status == 0
-			callback true, this.responseText
-		else
-			callback false, this
+		xhr.onload = (e) ->
+			if this.status == 200 or this.status == 0
+				callback true, this.responseText
+			else
+				callback false, this
 
-	xhr.send()
+		xhr.send()
+	catch e
+		callback false, e
+
+root.getImage = (url, callback) ->
+	try
+		xhr = new XMLHttpRequest
+		xhr.open 'get', url, true
+		xhr.responseType = 'arraybuffer'
+
+		xhr.onload = (e) ->
+			if this.status == 200 or this.status == 0
+				callback this.response
+			else
+				callback null
+
+		xhr.send()
+	catch e
+		callback null
+
 
 root.file = (path, callback) ->
 	root.get path, (success, file) ->
 		if success
-			callback?(file)
+			callback file
 		else
 			console.log "UJS Packager: Could not load file \"#{path}\""
-			callback?('')
+			callback ''

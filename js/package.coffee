@@ -6,7 +6,7 @@ root.bg = oex.bgProcess
 root.blocksExtensionDownloads = parseFloat(opera.version()) >= 12.10
 root.extension = null
 
-root.incrementVersion = true
+root.incrementVersion = false
 root.currentVersion = JSON.parse(sessionStorage['version'] or '0')
 
 require.config
@@ -171,12 +171,21 @@ buildExtension = (scripts, configs, callback) ->
 	zip = new JSZip
 	root.files =
 		'config.xml': getConfigXml(configs[0])
-		js: {}
 		css: {}
+		js: {}
+		img: {}
 		includes: {}
 
 	for s, i in scripts
 		files.includes["#{configs[i].name}.js"] = s
+
+	if configs[0].icon?
+		await bg.getImage configs[0].icon, defer icon
+		if icon?
+			files.img['icon.png'] = 'data:image/png,base64;' + base64ArrayBuffer(icon)
+		else
+			showError "Failed to download image \"#{configs[0].icon}\""
+			console.log "UJS Packager: Failed to download image \"#{configs[0].icon}\""
 
 	# if any script has preferences, include options page and its dependencies
 	if prefs.reduce ((prev, curr) -> !!prev or curr.length > 0), false
@@ -193,7 +202,7 @@ buildExtension = (scripts, configs, callback) ->
 		files.js['default_settings.js'] = "var defaults = [ \n\t#{prefDefs} \n]; var storage = new SettingStorage(defaults);"
 	else
 		await bg.file '/package/index.html', defer files['index.html']
-			
+
 	addDirectoryToZip(zip, files)
 	callback?(zip.generate())
 	
@@ -204,11 +213,16 @@ buildExtension = (scripts, configs, callback) ->
 #		 'folder name': { dir object }
 addDirectoryToZip = (zip, dir) ->
 	for name, file of dir
-		if typeof file == 'string'
-			zip.file name, file
-		else if not isEmpty(file)
-			folder = zip.folder name
-			addDirectoryToZip(folder, file)
+		if file?
+			if typeof file == 'string'
+				if file.indexOf('data:') == 0
+					[type, sep, data] = file.partition(';')
+					zip.file name, data, { base64: type.indexOf('base64') > 0 }
+				else
+					zip.file name, file
+			else if not isEmpty(file)
+				folder = zip.folder name
+				addDirectoryToZip(folder, file)
 			
 # Builds the extension as a data URI and opens it in a new tab so that Opera will download it
 installExtension = () ->
@@ -448,6 +462,7 @@ getConfig = (script, url) ->
 					when 'description' then description = data
 					when 'author' then author = data
 					when 'version' then version = data
+					when 'icon' then icon = data
 				
 	if not name?
 		name = url.split('/').pop().replace /(\.user)?\.js/, ''
@@ -469,12 +484,16 @@ getConfig = (script, url) ->
 	if not author?
 		author = urlParts.domain
 
+	if not icon?
+		icon = null
+
 	return {
 		name: name
 		version: version
 		description: description
 		namespace: namespace
 		author: author
+		icon: icon
 		greasemonkey: url.indexOf('.user.js') >= 0
 	}
 
@@ -484,11 +503,17 @@ getConfigXml = (config) ->
 	else
 		href = ''
 
+	if config.icon?
+		icon = '<icon src="img/icon.png" />'
+	else
+		icon = ''
+
 	return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n
 <widget xmlns=\"http://www.w3.org/ns/widgets\" version=\"#{config.version.encodeHTML()}\" id=\"extensions:#{config.name.encodeHTML()}\">\n
 	<name>#{config.name.encodeHTML()}</name>\n
 	<description>#{config.description.encodeHTML()}</description>\n
 	<author#{href}>#{config.author.encodeHTML()}</author>\n
+	#{icon}\n
 </widget>"
 
 
@@ -505,6 +530,48 @@ parseURL = (url) ->
 		query: query
 		hash: hash
 	}
+
+# https://gist.github.com/958841
+base64ArrayBuffer = (arrayBuffer) ->
+	base64 = ''
+	encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+
+	bytes = new Uint8Array(arrayBuffer)
+	byteLength = bytes.byteLength
+	byteRemainder = byteLength % 3
+	mainLength = byteLength - byteRemainder
+
+	for i in [0..(mainLength)] by 3
+		chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2]
+		
+		a = (chunk & 16515072) >> 18 # 16515072 = (2^6 - 1) << 18
+		b = (chunk & 258048)   >> 12 # 258048   = (2^6 - 1) << 12
+		c = (chunk & 4032)     >>  6 # 4032     = (2^6 - 1) << 6
+		d = chunk & 63               # 63       = 2^6 - 1
+
+		base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d]
+
+	if byteRemainder == 1
+		chunk = bytes[mainLength]
+
+		a = (chunk & 252) >> 2 # 252 = (2^6 - 1) << 2
+
+		# Set the 4 least significant bits to zero
+		b = (chunk & 3)   << 4 # 3   = 2^2 - 1
+
+		base64 += encodings[a] + encodings[b] + '=='
+	else if byteRemainder == 2
+		chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1]
+
+		a = (chunk & 64512) >> 10 # 64512 = (2^6 - 1) << 10
+		b = (chunk & 1008)  >>  4 # 1008  = (2^6 - 1) << 4
+
+		# Set the 2 least significant bits to zero
+		c = (chunk & 15)    <<  2 # 15    = 2^4 - 1
+
+		base64 += encodings[a] + encodings[b] + encodings[c] + '='
+  
+	return base64
 
 String.prototype.partition = (sep) ->
 	index = this.indexOf(sep)
